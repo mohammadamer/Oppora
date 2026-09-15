@@ -1,0 +1,28 @@
+{
+  "name": "oppora",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Oppora opportunity discovery platform monorepo",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "lint": "eslint .",
+    "format": "prettier --check .",
+    "test": "vitest run",
+    "build": "tsc -b"
+  },
+  "devDependencies": {
+    "@types/js-yaml": "^4.0.9",
+    "@types/node": "^26.6.0",
+    "@typescript-eslint/eslint-plugin": "^7.18.0",
+    "@typescript-eslint/parser": "^7.18.0",
+    "eslint": "^8.57.0",
+    "js-yaml": "^5.4.2",
+    "prettier": "^3.3.3",
+    "prisma": "^5.22.0",
+    "typescript": "^5.5.4",
+    "vitest": "^1.6.0"
+  }
+}

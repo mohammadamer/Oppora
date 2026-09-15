@@ -1,0 +1,280 @@
+// Prisma schema for the Oppora Phase 1 persistence design.
+// See ../../specs/001-opportunity-platform-foundation/data-model.md for full field/relationship
+// documentation and modeling rules (unknown-value semantics, provenance retention).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                  String               @id @default(uuid())
+  externalAuthSubject String               @unique
+  email               String?
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  lastActiveAt        DateTime?
+  preference          UserPreference?
+  savedOpportunities  SavedOpportunity[]
+  applications        Application[]
+  notificationPref    NotificationPreference?
+}
+
+model UserPreference {
+  userId              String   @id
+  user                User     @relation(fields: [userId], references: [id])
+  country             String?
+  educationLevel      String?
+  fieldsOfStudy       String[]
+  preferredCountries  String[]
+  fundingPreferences  String[]
+  languages           String[]
+  categories          String[]
+  remotePreference    Boolean?
+  updatedAt           DateTime @updatedAt
+}
+
+enum SourceType {
+  API
+  FEED
+  DATASET
+  PUBLIC_PAGE
+}
+
+enum SourceTrustLevel {
+  UNVERIFIED
+  PROVISIONAL
+  VERIFIED
+}
+
+model Source {
+  id                 String            @id @default(uuid())
+  name               String
+  website            String
+  baseUrl            String
+  sourceType         SourceType
+  country            String?
+  trustLevel         SourceTrustLevel
+  crawlEnabled       Boolean           @default(false)
+  crawlFrequency     String?
+  termsUrl           String?
+  robotsUrl          String?
+  lastSuccessfulRun  DateTime?
+  lastFailedRun      DateTime?
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+  opportunities      Opportunity[]
+  ingestionRuns      IngestionRun[]
+  ingestionErrors    IngestionError[]
+
+  // Source id + verification/health lookups (data-model.md Index Requirements).
+  @@index([id, lastSuccessfulRun, lastFailedRun])
+}
+
+model Category {
+  id            String        @id @default(uuid())
+  code          String        @unique
+  name          String
+  description   String?
+  active        Boolean       @default(true)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  opportunities Opportunity[]
+}
+
+enum OpportunityStatus {
+  DISCOVERED
+  ACTIVE
+  EXPIRING
+  EXPIRED
+  ARCHIVED
+  INVALID
+}
+
+model Opportunity {
+  id                     String              @id @default(uuid())
+  externalId             String?
+  sourceId               String
+  source                 Source              @relation(fields: [sourceId], references: [id])
+  sourceUrl              String
+  officialApplicationUrl String?
+  title                  String
+  slug                   String
+  description            String?
+  shortDescription       String?
+  organization           String?
+  provider               String?
+  categoryId             String
+  category               Category            @relation(fields: [categoryId], references: [id])
+  remoteAvailable        Boolean?
+  fundingType            String?
+  fundingAmount          Float?
+  currency               String?
+  benefits               String[]
+  eligibility            String[]
+  requirements           String[]
+  applicationProcess     String[]
+  startDate              DateTime?
+  endDate                DateTime?
+  deadline               DateTime?
+  deadlineTimezone       String?
+  status                 OpportunityStatus   @default(DISCOVERED)
+  verified               Boolean             @default(false)
+  verificationDate       DateTime?
+  publishedAt            DateTime?
+  lastSeenAt             DateTime            @default(now())
+  createdAt              DateTime            @default(now())
+  updatedAt              DateTime            @updatedAt
+
+  countries              OpportunityCountry[]
+  fields                 OpportunityField[]
+  savedBy                SavedOpportunity[]
+  applications           Application[]
+
+  // Unique source/external identifier when present (data-model.md Index Requirements).
+  @@unique([sourceId, externalId])
+  // Status plus deadline for active and closing-soon queries.
+  @@index([status, deadline])
+  // Category, funding type, remote availability, publication date for filtering/browsing.
+  @@index([categoryId, fundingType, remoteAvailable, publishedAt])
+}
+
+enum CountryRelationshipType {
+  ELIGIBILITY
+  DESTINATION
+}
+
+model OpportunityCountry {
+  opportunityId    String
+  opportunity      Opportunity             @relation(fields: [opportunityId], references: [id])
+  countryCode      String
+  relationshipType CountryRelationshipType
+
+  // Duplicate (opportunityId, countryCode) pairs are prohibited.
+  @@id([opportunityId, countryCode])
+}
+
+model OpportunityField {
+  opportunityId String
+  opportunity   Opportunity @relation(fields: [opportunityId], references: [id])
+  fieldCode     String
+  sourceLabel   String?
+
+  // Duplicate (opportunityId, fieldCode) pairs are prohibited.
+  @@id([opportunityId, fieldCode])
+}
+
+model SavedOpportunity {
+  userId        String
+  user          User        @relation(fields: [userId], references: [id])
+  opportunityId String
+  opportunity   Opportunity @relation(fields: [opportunityId], references: [id])
+  folder        String?
+  notes         String?
+  savedAt       DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  // One active saved relationship per user/opportunity pair.
+  @@id([userId, opportunityId])
+  // User identifier plus saved timestamp for saved opportunities.
+  @@index([userId, savedAt])
+}
+
+enum ApplicationStatus {
+  WISHLIST
+  PLANNING
+  APPLIED
+  INTERVIEW
+  ACCEPTED
+  REJECTED
+  WITHDRAWN
+}
+
+model Application {
+  id                String            @id @default(uuid())
+  userId            String
+  user              User              @relation(fields: [userId], references: [id])
+  opportunityId     String
+  opportunity       Opportunity       @relation(fields: [opportunityId], references: [id])
+  status            ApplicationStatus @default(WISHLIST)
+  notes             String?
+  applicationDate   DateTime?
+  personalDeadline  DateTime?
+  documentMetadata  Json?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  // User identifier plus application status and personal deadline for tracking views.
+  @@index([userId, status, personalDeadline])
+}
+
+model NotificationPreference {
+  userId    String   @id
+  user      User     @relation(fields: [userId], references: [id])
+  enabled   Boolean  @default(true)
+  leadTimes Int[]
+  updatedAt DateTime @updatedAt
+}
+
+enum IngestionRunStatus {
+  RUNNING
+  COMPLETED
+  FAILED
+  PARTIAL
+}
+
+model IngestionRun {
+  id               String             @id @default(uuid())
+  sourceId         String
+  source           Source             @relation(fields: [sourceId], references: [id])
+  startedAt        DateTime           @default(now())
+  completedAt      DateTime?
+  status           IngestionRunStatus @default(RUNNING)
+  discoveredCount  Int                @default(0)
+  parsedCount      Int                @default(0)
+  validCount       Int                @default(0)
+  duplicateCount   Int                @default(0)
+  rejectedCount    Int                @default(0)
+  updatedCount     Int                @default(0)
+  newCount         Int                @default(0)
+  errors           IngestionError[]
+
+  // Ingestion run source/status/start time for operational review.
+  @@index([sourceId, status, startedAt])
+}
+
+enum IngestionStage {
+  DISCOVER
+  FETCH
+  PARSE
+  NORMALIZE
+  VALIDATE
+  STORE
+}
+
+enum IngestionErrorSeverity {
+  WARNING
+  ERROR
+  CRITICAL
+}
+
+model IngestionError {
+  id                String                 @id @default(uuid())
+  ingestionRunId    String
+  ingestionRun      IngestionRun           @relation(fields: [ingestionRunId], references: [id])
+  sourceId          String
+  source            Source                 @relation(fields: [sourceId], references: [id])
+  stage             IngestionStage
+  externalReference String?
+  message           String
+  severity          IngestionErrorSeverity @default(ERROR)
+  retryable         Boolean                @default(false)
+  occurredAt        DateTime               @default(now())
+
+  // Ingestion error source/stage/time for operational review.
+  @@index([sourceId, stage, occurredAt])
+}

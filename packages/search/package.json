@@ -1,0 +1,16 @@
+{
+  "name": "@oppora/search",
+  "version": "0.1.0",
+  "private": true,
+  "description": "SearchProvider abstraction and contract types",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -b",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@oppora/shared": "*",
+    "@oppora/opportunity-core": "*"
+  }
+}

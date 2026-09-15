@@ -1,0 +1,15 @@
+{
+  "files": [],
+  "references": [
+    { "path": "packages/shared" },
+    { "path": "packages/config" },
+    { "path": "packages/contracts" },
+    { "path": "packages/opportunity-core" },
+    { "path": "packages/database" },
+    { "path": "packages/search" },
+    { "path": "packages/ingestion-core" },
+    { "path": "packages/notifications" },
+    { "path": "packages/testing" },
+    { "path": "apps/api" }
+  ]
+}
