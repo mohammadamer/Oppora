@@ -1,0 +1,16 @@
+{
+  "name": "@oppora/ingestion-core",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Adapter orchestration, approved source registry, run/error reporting",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -b",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@oppora/shared": "*",
+    "@oppora/opportunity-core": "*"
+  }
+}

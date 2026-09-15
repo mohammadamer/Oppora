@@ -1,0 +1,12 @@
+{
+  "name": "@oppora/contracts",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Versioned public request/response schemas",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -b",
+    "test": "vitest run"
+  }
+}

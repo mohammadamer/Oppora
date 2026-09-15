@@ -1,0 +1,16 @@
+{
+  "name": "@oppora/notifications",
+  "version": "0.1.0",
+  "private": true,
+  "description": "NotificationProvider boundary",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -b",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@oppora/shared": "*",
+    "@oppora/opportunity-core": "*"
+  }
+}

@@ -1,0 +1,110 @@
+openapi: 3.0.3
+info:
+  title: Oppora Opportunities API
+  version: v1
+  description: Public, versioned contract for anonymous opportunity discovery and source attribution.
+servers:
+  - url: /api/v1
+paths:
+  /opportunities:
+    get:
+      summary: List opportunities
+      security: []
+      parameters:
+        - { name: query, in: query, schema: { type: string } }
+        - { name: category, in: query, schema: { type: array, items: { type: string } } }
+        - { name: country, in: query, schema: { type: array, items: { type: string } } }
+        - { name: destination, in: query, schema: { type: array, items: { type: string } } }
+        - { name: studyLevel, in: query, schema: { type: array, items: { type: string } } }
+        - { name: fieldOfStudy, in: query, schema: { type: array, items: { type: string } } }
+        - { name: fundingType, in: query, schema: { type: array, items: { type: string } } }
+        - { name: remoteAvailable, in: query, schema: { type: boolean } }
+        - { name: deadlineBefore, in: query, schema: { type: string, format: date-time } }
+        - { name: language, in: query, schema: { type: array, items: { type: string } } }
+        - { name: sort, in: query, schema: { type: string, enum: [relevance, deadline, newest] } }
+        - { name: cursor, in: query, schema: { type: string } }
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 20 } }
+      responses:
+        '200':
+          description: Paginated opportunity summaries
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OpportunityPage' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+  /opportunities/{opportunityId}:
+    get:
+      summary: Get an opportunity
+      security: []
+      parameters:
+        - { name: opportunityId, in: path, required: true, schema: { type: string } }
+      responses:
+        '200':
+          description: Opportunity details with provenance
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Opportunity' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /sources/{sourceId}:
+    get:
+      summary: Get source attribution
+      security: []
+      parameters:
+        - { name: sourceId, in: path, required: true, schema: { type: string } }
+      responses:
+        '200':
+          description: Public source metadata
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SourceAttribution' }
+        '404': { $ref: '#/components/responses/NotFound' }
+components:
+  schemas:
+    OpportunityPage:
+      type: object
+      required: [items, hasMore]
+      properties:
+        items: { type: array, items: { $ref: '#/components/schemas/OpportunitySummary' } }
+        nextCursor: { type: string, nullable: true }
+        hasMore: { type: boolean }
+    OpportunitySummary:
+      type: object
+      required: [id, title, category, source, status]
+      properties:
+        id: { type: string }
+        title: { type: string }
+        organization: { type: string, nullable: true }
+        category: { type: string }
+        countries: { type: array, items: { type: string } }
+        fundingType: { type: string, nullable: true }
+        deadline: { type: string, format: date-time, nullable: true }
+        status: { type: string, enum: [DISCOVERED, ACTIVE, EXPIRING, EXPIRED, ARCHIVED, INVALID] }
+        source: { $ref: '#/components/schemas/SourceAttribution' }
+    Opportunity:
+      allOf:
+        - $ref: '#/components/schemas/OpportunitySummary'
+        - type: object
+          required: [sourceUrl, verified]
+          properties:
+            sourceUrl: { type: string, format: uri }
+            officialApplicationUrl: { type: string, format: uri, nullable: true }
+            description: { type: string, nullable: true }
+            benefits: { type: array, items: { type: string } }
+            eligibility: { type: array, items: { type: string } }
+            requirements: { type: array, items: { type: string } }
+            applicationProcess: { type: array, items: { type: string } }
+            verified: { type: boolean }
+            verificationDate: { type: string, format: date-time, nullable: true }
+    SourceAttribution:
+      type: object
+      required: [id, name, website]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        website: { type: string, format: uri }
+        lastVerified: { type: string, format: date-time, nullable: true }
+        officialApplication: { type: boolean }
+  responses:
+    InvalidRequest:
+      description: Invalid filter, sort, cursor, or pagination input
+    NotFound:
+      description: Requested public resource was not found
